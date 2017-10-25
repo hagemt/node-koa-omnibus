@@ -1,6 +1,6 @@
 {
   "name": "koa-omnibus",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Base middleware for `koa` servers.",
   "author": "Tor E Hagemann <tor.hagemann@gmail.com>",
   "license": "MIT",
@@ -8,6 +8,7 @@
   "dependencies": {
     "boom": "6.0.0",
     "bunyan": "1.8.12",
+    "koa": "2.3.0",
     "lodash": "4.17.4",
     "lru-cache": "4.1.1",
     "uuid": "3.1.0"

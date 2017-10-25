@@ -2,7 +2,7 @@
 
 It does exactly everything you want a server to do.
 
-Read the source, or clone: `npm install koa && npm run demo`
+Read the source, or clone: `npm install && npm run demo`
 
 ## What do you mean? I want to try it.
 
@@ -27,3 +27,20 @@ omnibus({
 	redactedResponse: context => _.omit(context.response, ['header']), // or here
 })
 ```
+
+## Oh, yeah. One more thing:
+
+This doesn't include any of these modules, but you can `.use` them, if you wish:
+
+* https://www.npmjs.com/package/koa-bodyparser
+* https://www.npmjs.com/package/koa-compress
+* https://www.npmjs.com/package/koa-etag
+* https://www.npmjs.com/package/koa-favicon
+* https://www.npmjs.com/package/koa-helmet
+* https://www.npmjs.com/package/koa-logger
+* https://www.npmjs.com/package/koa-mount
+* https://www.npmjs.com/package/koa-ratelimit
+* https://www.npmjs.com/package/koa-rewrite
+* https://www.npmjs.com/package/koa-session
+* https://www.npmjs.com/package/koa-static
+* https://www.npmjs.com/package/@koa/cors
