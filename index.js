@@ -6,7 +6,7 @@ const LRU = require('lru-cache')
 const UUID = require('uuid')
 const _ = require('lodash')
 
-const boundedExecutor = ms => fn => new Promise((fulfill, reject) => {
+const boundedAsyncFunction = (ms, fn) => new Promise((fulfill, reject) => {
 	const timeout = setTimeout(reject, ms, Boom.tooManyRequests())
 	const onFulfilled = (result) => {
 		clearTimeout(timeout)
@@ -56,8 +56,8 @@ const omnibus = (options) => {
 		Object.assign(context.state, { log, tracking })
 		const hrtime = process.hrtime() // into state?
 		try {
-			await limitRate(context)
-			await limitTime(next)
+			await limitRate(context, next)
+			await limitTime(context, next)
 		} catch (error) {
 			context.state.error = options.stateError(context, error)
 		} finally {
@@ -102,8 +102,8 @@ const trackingObject = (context, header) => {
 
 const defaults = Object.freeze({
 	limits: Object.freeze({ age: 60000, max: 1000000, next: 60000, rpm: 1000 }),
-	limitRate: limits => rateLimitByIP(limits), // using near fixed-size cache (LRU)
-	limitTime: limits => boundedExecutor(limits.next), // using setTimeout and async
+	limitRate: limits => rateLimitByIP(limits), // using near cache (fixed-size LRU)
+	limitTime: limits => (context, next) => boundedAsyncFunction(limits.next, next),
 	stateError: (context, error) => Boom.boomify(error, context), // = state.error
 	stateHeaders: (context, header) => trackingObject(context, header), // tracking
 	stateLogger: (context, fields) => getLogger().child(fields), // log w/ tracking
@@ -134,7 +134,7 @@ if (!module.parent) {
 		limits: { age: 60000, max: 600, next: 6000, rpm: 60 }
 	})
 	application.use(async function throw400 (context) {
-		context.status = 200 // before:
+		context.status = 204 // No Content
 		const url = URL.parse(context.url)
 		throw Boom.badRequest(url.pathname)
 	})

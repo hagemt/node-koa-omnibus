@@ -8,9 +8,6 @@
   "dependencies": {
     "boom": "6.0.0",
     "bunyan": "1.8.12",
-    "koa": "2.3.0",
-    "koa-compose": "4.0.0",
-    "koa-router": "7.2.1",
     "lodash": "4.17.4",
     "lru-cache": "4.1.1",
     "uuid": "3.1.0"
@@ -23,6 +20,9 @@
     "nyc": "11.2.1",
     "supertest": "3.0.0"
   },
+  "peerDependencies": {
+    "koa": "^2"
+  },
   "keywords": [
     "koa",
     "omnibus",
@@ -30,9 +30,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "/dev/null"
+    "url": "https://github.com/hagemt/node-koa-omnibus.git"
   },
   "scripts": {
+    "eslint": "eslint .eslintrc.js *.js",
     "demo": "LOG_LEVEL=trace node . | bunyan",
     "test": "NODE_ENV=test nyc mocha tests.js"
   }
