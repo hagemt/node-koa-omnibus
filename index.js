@@ -1,119 +1,51 @@
 /* eslint-env node */
-const Boom = require('boom')
-const Bunyan = require('bunyan')
 const KoaApplication = require('koa')
-const LRU = require('lru-cache')
-const UUID = require('uuid')
-const _ = require('lodash')
 
-const boundedAsyncFunction = (ms, fn) => new Promise((fulfill, reject) => {
-	const timeout = setTimeout(reject, ms, Boom.tooManyRequests())
-	const onFulfilled = (result) => {
-		clearTimeout(timeout)
-		fulfill(result)
-	}
-	const onRejected = (reason) => {
-		clearTimeout(timeout)
-		reject(reason)
-	}
-	fn().then(onFulfilled, onRejected)
-})
+const defaults = require('./defaults.js')
 
-const rateLimitByIP = ({ age, max, rpm }) => {
-	const cache = new LRU({ max, maxAge: age })
-	const touch = ({ ip: key }) => {
-		if (!cache.has(key)) {
-			const reset = Date.now() + age
-			cache.set(key, { count: 0, reset })
-		}
-		const value = cache.get(key)
-		value.count += 1
-		return value
-	}
-	return async function throw429 (context) {
-		const { count, reset } = touch(context)
-		const remaining = Math.max(0, rpm - count)
-		Object.assign(context.state.tracking, {
-			'X-RateLimit-Limit': `${rpm} request(s) per minute`,
-			'X-RateLimit-Remaining': `${remaining} request(s)`,
-			'X-RateLimit-Reset': new Date(reset).toISOString(),
-		})
-		if (rpm < count) {
-			const seconds = (reset - Date.now()) / 1000
-			const header = Math.ceil(seconds).toFixed(0)
-			context.state.tracking['Retry-After'] = header
-			throw Boom.tooManyRequests() // put headers here?
-		}
-	}
+const createOptions = (...args) => {
+	//const options = _.defaultsDeep({}, defaults, ...args) // broken
+	const options = Object.assign({}, defaults, ...args) // works fine:
+	options.headers = Object.assign({}, defaults.headers, options.headers)
+	options.limits = Object.assign({}, defaults.limits, options.limits)
+	return options // XXX: could turn this into a class, if necessary
 }
 
-const omnibus = (options) => {
-	const limitRate = options.limitRate(options.limits)
-	const limitTime = options.limitTime(options.limits)
+const createMiddleware = (options) => {
+	const { tracking, timing } = options.headers
+	const limitRate = options.limitRate(options)
+	const limitTime = options.limitTime(options)
 	return async function omnibus (context, next) {
-		const tracking = options.stateHeaders(context, 'X-Tracking-ID')
-		const log = options.stateLogger(context, { tracking })
-		Object.assign(context.state, { log, tracking })
-		const hrtime = process.hrtime() // into state?
+		const error = options.stateError(options, context) // default: 404 Not Found
+		const headers = options.stateHeaders(options, context, tracking) // Object
+		const log = options.stateLogger(options, context, { tracking: headers })
+		const source = { error, log, timing: {}, tracking: headers }
+		const target = options.stateObject(options, context, source)
+		const hrtime = target.timing.start = process.hrtime()
 		try {
 			await limitRate(context, next)
 			await limitTime(context, next)
+			target.error = null // reset
 		} catch (error) {
-			context.state.error = options.stateError(context, error)
+			target.error = options.stateError(options, context, error)
 		} finally {
-			const [s, ns] = process.hrtime(hrtime) // precise:
+			const [s, ns] = process.hrtime(hrtime) // since start
 			const ms = Number((s * 1e3) + (ns / 1e6)).toFixed(6)
-			tracking['X-Response-Time'] = `${ms} millisecond(s)`
-			const err = options.redactedError(context)
-			const req = options.redactedRequest(context)
-			const res = options.redactedResponse(context)
+			headers[timing] = `${ms} millisecond(s)`
+			const err = options.redactedError(options, context)
+			const req = options.redactedRequest(options, context)
+			const res = options.redactedResponse(options, context)
 			log.trace({ err, req, res }, 'handled')
 		}
 	}
 }
 
-const getLogger = _.once(() => {
-	return Bunyan.createLogger({
-		level: process.env.LOG_LEVEL || 'debug',
-		name: process.env.LOG_NAME || 'omnibus',
-		serializers: Bunyan.stdSerializers,
-		streams: [{ stream: process.stdout }],
-	})
-})
-
-const inspectBoom = (context, error) => {
-	const setHeaders = (headers) => {
-		for (const [key, value] of Object.entries(headers)) {
-			context.set(key, value)
-		}
-	}
-	if (error && error.isBoom) {
-		context.status = error.output.statusCode
-		setHeaders(Object(error.output.headers))
-		context.body = error.output.payload
-	}
-	setHeaders(Object(context.state.tracking))
-	return error
+const omnibus = (...args) => {
+	const options = createOptions(...args)
+	return createMiddleware(options)
 }
 
-const trackingObject = (context, header) => {
-	return { [header]: context.get(header) || UUID.v1() }
-}
-
-const defaults = Object.freeze({
-	limits: Object.freeze({ age: 60000, max: 1000000, next: 60000, rpm: 1000 }),
-	limitRate: limits => rateLimitByIP(limits), // using near cache (fixed-size LRU)
-	limitTime: limits => (context, next) => boundedAsyncFunction(limits.next, next),
-	stateError: (context, error) => Boom.boomify(error, context), // = state.error
-	stateHeaders: (context, header) => trackingObject(context, header), // tracking
-	stateLogger: (context, fields) => getLogger().child(fields), // log w/ tracking
-	redactedError: context => inspectBoom(context, context.state.error),
-	redactedRequest: context => _.omit(context.request, ['header']),
-	redactedResponse: context => _.omit(context.response, ['header']),
-})
-
-const createApplication = (...args) => {
-	const options = Object.assign({}, defaults, ...args)
+const createApplication = (options) => {
 	const application = new KoaApplication()
 	application.use(omnibus(options))
 	return application
@@ -121,27 +53,6 @@ const createApplication = (...args) => {
 
 module.exports = Object.assign(omnibus, {
 	createApplication,
+	createMiddleware,
 	default: omnibus,
 })
-
-if (!module.parent) {
-	const URL = require('url')
-	const hostname = process.env.BIND || 'localhost'
-	const port = process.env.PORT || 8080 // on hostname
-	const log = getLogger().child({ component: 'demo' })
-	const application = omnibus.createApplication({
-		// allow each client (track 600) 60 req/min (<6s RTT)
-		limits: { age: 60000, max: 600, next: 6000, rpm: 60 }
-	})
-	application.use(async function throw400 (context) {
-		context.status = 204 // No Content
-		const url = URL.parse(context.url)
-		throw Boom.badRequest(url.pathname)
-	})
-	const server = require('http').createServer()
-	server.on('request', application.callback())
-	server.listen(port, hostname, () => {
-		const url = URL.format({ hostname, port, protocol: 'http:' })
-		log.info({ url }, 'listening')
-	})
-}
