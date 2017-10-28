@@ -1,5 +1,7 @@
 # koa-omnibus
 
+I wouldn't use this in production until it's more battle-tested. (at least v1)
+
 It does exactly everything you want an API server to do, and nothing more.
 
 Put this at the front of your `koa@^2` middleware chain and get hacking.
