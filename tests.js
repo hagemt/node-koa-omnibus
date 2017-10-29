@@ -11,8 +11,9 @@ describe('omnibus', () => {
 
 	const test = {}
 
-	const validUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-	const validMS = /^1\.[0-9]{6} millisecond\(s\)$/
+	const validRequestUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+	const validResponseTime = /^[0-9]\.[0-9]{6} millisecond\(s\)$/
+	const validDateString = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/
 
 	describe('usage', () => {
 
@@ -27,9 +28,9 @@ describe('omnibus', () => {
 			assert(typeof omnibus === 'function', 'omnibus is not a Function')
 			return supertest(test.server)
 				.get('/')
-				.expect('x-request-id', validUUID)
-				.expect('x-response-time', validMS)
-				.expect(204, '') // actually No Content
+				.expect('x-request-id', validRequestUUID)
+				.expect('x-response-time', validResponseTime)
+				.expect(204, '') // body of No Content
 		})
 
 		after(() => {
@@ -42,7 +43,7 @@ describe('omnibus', () => {
 	describe('errors', () => {
 
 		// 500 Internal Server Error, then 429 Too Many Requests
-		const options = { limits: { rpm: 1 } } // see above/below
+		const options = { limits: { rpm: 1 }, namespace: false }
 
 		before(() => {
 			const application = omnibus.createApplication(options)
@@ -58,10 +59,14 @@ describe('omnibus', () => {
 		})
 
 		it('features a simple in-memory rate limiter (429s)', () => {
-			const message = `Not Found: Exceeded rate limit: ${options.limits.rpm} request(s) per minute`
+			const header = `${options.limits.rpm} request(s) per minute`
+			const message = `Not Found: Exceeded rate limit [${header}]`
 			const body = Boom.tooManyRequests(message).output.payload
 			return supertest(test.server)
 				.get('/')
+				.expect('x-ratelimit-limit', header)
+				.expect('x-ratelimit-remaining', '0 request(s)')
+				.expect('x-ratelimit-reset', validDateString)
 				.expect('retry-after', '60')
 				.expect(429, body)
 		})

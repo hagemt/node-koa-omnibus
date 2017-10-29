@@ -5,9 +5,12 @@ const LRU = require('lru-cache')
 const UUID = require('uuid')
 const _ = require('lodash')
 
-const rateLimitByIP = ({ age, max, rpm }) => {
+const debug = require('debug')('koa-omnibus')
+
+const rateLimitByIP = ({ age, max, namespace, rpm }) => {
 	const cache = new LRU({ max, maxAge: age })
 	const touch = ({ ip: key }) => {
+		debug('tracking bucket: %s', key)
 		if (!cache.has(key)) {
 			const reset = Date.now() + age
 			cache.set(key, { count: 0, reset })
@@ -16,37 +19,45 @@ const rateLimitByIP = ({ age, max, rpm }) => {
 		value.count += 1
 		return value
 	}
-	return async function throw429 (context) {
+	const trackingHeaders = (context, headers) => {
+		const target = _.get(context, namespace, {})
+		const tracking = _.get(target, 'tracking', {})
+		return Object.assign(tracking, headers)
+	}
+	const middleware = async function throw429 (context) {
 		const { count, reset } = touch(context)
 		const remaining = Math.max(0, rpm - count)
-		const omnibus = context.state.omnibus // Object
-		const headers = Object.assign(omnibus.tracking, {
+		const headers = trackingHeaders(context, {
 			'X-RateLimit-Limit': `${rpm} request(s) per minute`,
 			'X-RateLimit-Remaining': `${remaining} request(s)`,
 			'X-RateLimit-Reset': new Date(reset).toISOString(),
 		})
 		if (rpm < count) {
 			headers['Retry-After'] = Math.ceil((reset - Date.now()) / 1000).toFixed(0)
-			const message = `Exceeded rate limit: ${headers['X-RateLimit-Limit']}`
-			throw Boom.tooManyRequests(message, { headers }) // see inspectBoom
+			const message = `Exceeded rate limit [${headers['X-RateLimit-Limit']}]`
+			throw Boom.tooManyRequests(message) // data w/ headers is redundant
 		}
 	}
+	return Object.assign(middleware, { cache, touch })
 }
 
 const timeBoundedAsyncFunction = (ms, fn) => new Promise((fulfill, reject) => {
 	// conforms to https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/408:
-	const message = `Exceeded time limit: ${ms} millisecond(s)` // see inspectBoom
+	const message = `Exceeded time limit [${ms} millisecond(s)]` // see renderBoom
 	const error = Boom.clientTimeout(message, { headers: { Connection: 'close' } })
+	debug('timeout set: %dms', ms) // do this after?
 	const timeout = setTimeout(reject, ms, error)
-	const onFulfilled = (result) => {
-		clearTimeout(timeout)
-		fulfill(result)
-	}
-	const onRejected = (reason) => {
-		clearTimeout(timeout)
-		reject(reason)
-	}
-	fn().then(onFulfilled, onRejected)
+	fn()
+		.then((result) => {
+			debug('timeout end: %dms', ms)
+			clearTimeout(timeout)
+			fulfill(result)
+		})
+		.catch((reason) => {
+			debug('timeout hit: %dms', ms)
+			clearTimeout(timeout)
+			reject(reason)
+		})
 })
 
 const getLogger = _.once(() => {
@@ -59,54 +70,57 @@ const getLogger = _.once(() => {
 
 const createBoom = (context, error) => {
 	if (error) return Boom.boomify(error, context)
-	return Boom.create(context.status) // default
+	return Boom.create(context.status) // may throw
 }
 
-const renderBoom = (context, options) => {
-	const getState = (key) => {
-		if (!options.namespace) return context.state[key]
-		return context.state[options.namespace][key]
-	}
-	const setHeaders = (headers) => {
-		for (const [key, value] of Object.entries(headers)) {
+const renderBoom = (context, namespace) => {
+	const object = _.get(context, namespace, {})
+	const setHeaders = (parent, keyspace) => {
+		const child = _.get(parent, keyspace, {})
+		for (const [key, value] of Object.entries(child)) {
+			debug('rendered header: %s=%s', key, value)
 			context.set(key, value)
 		}
 	}
-	const error = getState('error')
+	const error = _.get(object, 'error')
 	if (error && error.isBoom) {
-		context.status = error.output.statusCode
-		setHeaders(Object(error.output.headers))
-		context.body = Object(error.output.payload)
-		setHeaders(Object(_.get(error.data, 'headers')))
+		const { data, output } = error
+		context.status = output.statusCode
+		setHeaders(output, 'headers')
+		context.body = output.payload
+		setHeaders(data, 'headers')
+		const summary = output.payload.error
+		debug('rendered Boom: %s', summary)
 	}
-	setHeaders(Object(getState('tracking')))
+	setHeaders(object, 'tracking')
 	return error
 }
 
-const namespacedObject = (target, ...args) => {
-	const source = Object.assign({}, ...args) // holds options, etc.
-	if (!source.options.namespace) return Object.assign(target, source)
-	Object.assign(target, { [source.options.namespace]: source })
-	return source
+const trackingObject = (context, key) => {
+	const value = context.get(key) || UUID.v1()
+	debug('tracking header: %s=%s', key, value)
+	return { [key]: value } // more added later
 }
 
-const trackingObject = (context, header) => {
-	return { [header]: context.get(header) || UUID.v1() }
+const namespacedObject = (context, namespace, ...args) => {
+	const error = createBoom(context) // default: 404 Not Found
+	context[namespace] = Object(context[namespace]) // decorated:
+	return Object.assign(context[namespace], { error }, ...args)
 }
 
 const defaults = {
 	headers: Object.freeze({ timing: 'X-Response-Time', tracking: 'X-Request-ID' }),
 	limits: Object.freeze({ age: 60000, max: 1000 * 1000, next: 60000, rpm: 1000 }),
-	namespace: 'omnibus', // if set to false-y value, will assign directly to context.state
+	namespace: 'omnibus', // if set to false-y value, will write directly to context.state
 	limitRate: ({ namespace, limits }) => rateLimitByIP(Object.assign({ namespace }, limits)),
 	limitTime: ({ limits }) => (context, next) => timeBoundedAsyncFunction(limits.next, next),
-	redactedError: (options, context) => renderBoom(context, options), // no details on 500, etc.
+	redactedError: ({ namespace }, context) => renderBoom(context, namespace), // wraps 500s, etc.
 	redactedRequest: (options, context) => _.omit(context.request, ['header']), // no Authorization
 	redactedResponse: (options, context) => _.omit(context.response, ['header']), // no Set-Cookie
-	stateError: (options, context, error) => createBoom(context, error), // [namespace].error Object
-	stateHeaders: (options, context, string) => trackingObject(context, string), // tracking headers
-	stateLogger: (options, context, object) => getLogger().child(object), // log w/ tracking headers
-	stateObject: (options, context, object) => namespacedObject(context.state, { options }, object),
+	targetError: (options, context, error) => createBoom(context, error), // [namespace].error Object
+	targetHeaders: (options, context, string) => trackingObject(context, string), // tracking headers
+	targetLogger: (options, context, object) => getLogger().child(object), // log w/ tracking headers
+	targetObject: ({ namespace }, context, source) => namespacedObject(context, namespace, source),
 }
 
 module.exports = defaults

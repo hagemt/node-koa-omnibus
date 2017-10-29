@@ -6,7 +6,9 @@ It does exactly everything you want an API server to do, and nothing more.
 
 Put this at the front of your `koa@^2` middleware chain and get hacking.
 
-## What do you mean? I want to try it.
+## What do you mean? I want to try before I buy.
+
+Clone, then: `npm install && npm install koa && npm run demo` or:
 
 Slap this in `node server.js | bunyan` after `npm install koa koa-omnibus`:
 
@@ -15,8 +17,6 @@ const omnibus = require('koa-omnibus')
 omnibus.createApplication().listen()
 // or: application.use(omnibus())
 ```
-
-For a demo, clone, then: `npm install && npm install koa && npm run demo`.
 
 ## Defaults not good enough? Okay...
 
@@ -30,20 +30,20 @@ omnibus({
 	limits: Object { age:Number, max:Number, next:Number, rpm:Number }, // 60000/1000000/60000/1000
 	namespace: String, // default: 'omnibus' (if set false-y, context.state decorated directly)
 
-	// middleware factories:
+	// middleware factories (unary):
 	limitRate: options:Object => middleware:AsyncFunction, // 429 Too Many Requests
 	limitTime: options:Object => middleware:AsyncFunction, // 408 Request Timeout
 
-	// redaction functions:
-	redactedError: (options, context) => error, // do whatever you want here
-	redactedRequest: (options, context) => _.omit(context.request, ['header']),
-	redactedResponse: (options, context) => _.omit(context.response, ['header']),
+	// redaction transforms (binary):
+	redactedError: (options, context) => error, // do whatever transform(s) you want here
+	redactedRequest: (options, context) => _.omit(context.request, ['header']), // " here
+	redactedResponse: (options, context) => _.omit(context.response, ['header']), // " here
 
-	// decoration functions:
-	stateError: (options, context, error) => error, // not redacted (default: Boom)
-	stateHeaders: (options, context, string) => Object { [string]: "$(uuidgen -t)" },
-	stateLogger: (options, context, object) => log, // will include tracking headers
-	stateObject: (options, context, object) => object, // state[namespace] || state
+	// object factories (ternary):
+	targetError: (options, context, error) => error, // not redacted (default: Boom)
+	targetHeaders: (options, context, string) => Object { [string]: "$(uuidgen -t)" },
+	targetLogger: (options, context, object) => log, // will include tracking headers
+	targetObject: (options, context, object) => object, // context[namespace || 'state']
 
 })
 ```
