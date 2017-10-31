@@ -35,7 +35,8 @@ const createMiddleware = (options) => {
 			const err = options.redactedError(options, context)
 			const req = options.redactedRequest(options, context)
 			const res = options.redactedResponse(options, context)
-			log.trace({ err, req, res }, 'request')
+			if (!err) log.trace({ req, res }, 'request') // softer
+			else log.debug({ err, req, res }, 'request') // louder
 		}
 	}
 }

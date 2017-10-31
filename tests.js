@@ -60,7 +60,7 @@ describe('omnibus', () => {
 
 		it('features a simple in-memory rate limiter (429s)', () => {
 			const header = `${options.limits.rpm} request(s) per minute`
-			const message = `Not Found: Exceeded rate limit [${header}]`
+			const message = `Exceeded rate limit [${header}]` // Error:
 			const body = Boom.tooManyRequests(message).output.payload
 			return supertest(test.server)
 				.get('/')

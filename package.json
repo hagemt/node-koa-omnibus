@@ -1,6 +1,6 @@
 {
   "name": "koa-omnibus",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Base middleware for `koa` servers.",
   "author": "Tor E Hagemann <tor.hagemann@gmail.com>",
   "license": "MIT",
@@ -37,6 +37,6 @@
   "scripts": {
     "eslint": "eslint --report-unused-disable-directives .eslintrc.js *.js",
     "demo": "LOG_LEVEL=trace node demo.js | bunyan",
-    "test": "NODE_ENV=test nyc mocha tests.js"
+    "test": "LOG_LEVEL=fatal nyc mocha tests.js"
   }
 }
