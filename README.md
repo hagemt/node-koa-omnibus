@@ -1,5 +1,7 @@
 # koa-omnibus
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/hagemt/node-koa-omnibus.svg)](https://greenkeeper.io/)
+
 I wouldn't use this in production until it's more battle-tested. (at least v1)
 
 It does exactly everything you want an API server to do, and nothing more.
