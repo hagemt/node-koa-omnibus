@@ -1,5 +1,7 @@
 # koa-omnibus
 
+[![Build Status](https://travis-ci.org/hagemt/node-koa-omnibus.png?branch=master)](https://travis-ci.org/hagemt/node-koa-omnibus)
+
 I wouldn't use this in production until it's more battle-tested. (at least v1)
 
 It does exactly everything you want an API server to do, and nothing more.
