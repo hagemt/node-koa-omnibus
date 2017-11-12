@@ -64,7 +64,8 @@ const getLogger = _.once(() => {
 	return Bunyan.createLogger({
 		level: process.env.LOG_LEVEL || 'debug',
 		name: process.env.LOG_NAME || 'omnibus',
-		serializers: Bunyan.stdSerializers,
+		serializers: Bunyan.stdSerializers, // Object
+		src: process.env.NODE_ENV === 'development',
 	})
 })
 
