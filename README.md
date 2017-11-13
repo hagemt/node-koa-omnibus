@@ -1,6 +1,7 @@
 # koa-omnibus
 
 [![Build Status](https://travis-ci.org/hagemt/node-koa-omnibus.png?branch=master)](https://travis-ci.org/hagemt/node-koa-omnibus)
+[![Greenkeeper badge](https://badges.greenkeeper.io/hagemt/node-koa-omnibus.svg)](https://account.greenkeeper.io/account/hagemt)
 
 I wouldn't use this in production until it's more battle-tested. (at least v1)
 
