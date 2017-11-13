@@ -71,7 +71,9 @@ const getLogger = _.once(() => {
 
 const createBoom = (context, error) => {
 	if (error) return Boom.boomify(error, { context })
-	return Boom.create(context.status) // < 400 throws
+	return new Boom(`${context.method} ${context.url}`, {
+		statusCode: context.status,
+	})
 }
 
 const renderBoom = (context, namespace) => {
