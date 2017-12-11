@@ -5,7 +5,8 @@ const LRU = require('lru-cache')
 const UUID = require('uuid')
 const _ = require('lodash')
 
-const debug = require('debug')('koa-omnibus')
+const PACKAGE_NAME = 'omnibus' // make sure to keep DRY
+const debug = require('debug')(`koa-${PACKAGE_NAME}`)
 
 const rateLimitByIP = ({ age, max, namespace, rpm }) => {
 	const cache = new LRU({ max, maxAge: age })
@@ -63,7 +64,7 @@ const timeBoundedAsyncFunction = (ms, fn) => new Promise((fulfill, reject) => {
 const getLogger = _.once(() => {
 	return Bunyan.createLogger({
 		level: process.env.LOG_LEVEL || 'debug',
-		name: process.env.LOG_NAME || 'omnibus',
+		name: process.env.LOG_NAME || PACKAGE_NAME,
 		serializers: Bunyan.stdSerializers, // Object
 		src: process.env.NODE_ENV === 'development',
 	})
@@ -114,7 +115,7 @@ const namespacedObject = (context, namespace, ...args) => {
 const defaults = {
 	headers: Object.freeze({ timing: 'X-Response-Time', tracking: 'X-Request-ID' }),
 	limits: Object.freeze({ age: 60000, max: 1000 * 1000, next: 60000, rpm: 1000 }),
-	namespace: 'omnibus', // if set to false-y value, will write directly to context.state
+	namespace: PACKAGE_NAME, // if false-y, will set properties on context.state directly
 	limitRate: ({ namespace, limits }) => rateLimitByIP(Object.assign({ namespace }, limits)),
 	limitTime: ({ limits }) => (context, next) => timeBoundedAsyncFunction(limits.next, next),
 	redactedError: ({ namespace }, context) => renderBoom(context, namespace), // wraps 500s, etc.
