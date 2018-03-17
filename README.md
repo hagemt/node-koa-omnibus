@@ -1,6 +1,8 @@
 # koa-omnibus
 
 [![Travis CI badge](https://travis-ci.org/hagemt/node-koa-omnibus.svg?branch=master)](https://travis-ci.org/hagemt/node-koa-omnibus)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/c5903ebb2706657b1820/test_coverage)](https://codeclimate.com/github/hagemt/node-koa-omnibus/test_coverage)
+[![Maintainability](https://api.codeclimate.com/v1/badges/c5903ebb2706657b1820/maintainability)](https://codeclimate.com/github/hagemt/node-koa-omnibus/maintainability)
 [![Greenkeeper badge](https://badges.greenkeeper.io/hagemt/node-koa-omnibus.svg)](https://account.greenkeeper.io/account/hagemt)
 
 I wouldn't use this in production until it's more battle-tested. (at least v1)
