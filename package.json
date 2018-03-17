@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "eslint": "4.15.0",
-    "eslint-plugin-import": "2.8.0",
+    "eslint-plugin-import": "2.9.0",
     "eslint-plugin-mocha": "4.11.0",
     "mocha": "4.1.0",
     "nyc": "11.4.1",
