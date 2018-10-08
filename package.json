@@ -8,7 +8,7 @@
   "dependencies": {
     "boom": "7.2.0",
     "bunyan": "1.8.12",
-    "debug": "4.0.1",
+    "debug": "4.1.0",
     "koa": "2.5.3",
     "lodash": "4.17.11",
     "lru-cache": "4.1.3",
