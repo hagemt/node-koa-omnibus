@@ -20,7 +20,7 @@
     "eslint-plugin-mocha": "5.2.0",
     "mocha": "5.2.0",
     "nyc": "13.0.1",
-    "supertest": "3.3.0"
+    "supertest": "3.4.0"
   },
   "peerDependencies": {
     "koa": "^2"
