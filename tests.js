@@ -2,7 +2,7 @@
 const assert = require('assert')
 const HTTP = require('http')
 
-const Boom = require('boom') // errors
+const Boom = require('@hapi/boom')
 const supertest = require('supertest')
 
 const omnibus = require('.')

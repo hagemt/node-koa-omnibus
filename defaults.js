@@ -1,5 +1,5 @@
 /* eslint-env node */
-const Boom = require('boom')
+const Boom = require('@hapi/boom')
 const Bunyan = require('bunyan')
 const LRU = require('lru-cache')
 const UUID = require('uuid')
@@ -61,6 +61,7 @@ const timeBoundedAsyncFunction = (ms, fn) => new Promise((fulfill, reject) => {
 })
 
 const getLogger = _.once(() => {
+	/* istanbul ignore next */
 	return Bunyan.createLogger({
 		level: process.env.LOG_LEVEL || 'debug',
 		name: process.env.LOG_NAME || 'omnibus',
@@ -71,7 +72,7 @@ const getLogger = _.once(() => {
 
 const createBoom = (context, error) => {
 	if (error) return Boom.boomify(error, { context })
-	return new Boom(`${context.method} ${context.url}`, {
+	return new Boom.Boom(`${context.method} ${context.url}`, {
 		statusCode: context.status,
 	})
 }
