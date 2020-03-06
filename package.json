@@ -6,21 +6,21 @@
   "license": "MIT",
   "main": "index.js",
   "dependencies": {
-    "boom": "7.2.0",
+    "@hapi/boom": "9.0.0",
     "bunyan": "1.8.12",
-    "debug": "4.0.1",
-    "koa": "2.5.3",
-    "lodash": "4.17.13",
-    "lru-cache": "4.1.3",
-    "uuid": "3.3.2"
+    "debug": "4.1.1",
+    "koa": "2.11.0",
+    "lodash": "4.17.15",
+    "lru-cache": "5.1.1",
+    "uuid": "7.0.2"
   },
   "devDependencies": {
     "eslint": "5.6.0",
     "eslint-plugin-import": "2.14.0",
     "eslint-plugin-mocha": "5.2.0",
-    "mocha": "5.2.0",
-    "nyc": "13.0.1",
-    "supertest": "3.3.0"
+    "mocha": "7.1.0",
+    "nyc": "15.0.0",
+    "supertest": "4.0.2"
   },
   "peerDependencies": {
     "koa": "^2"
@@ -37,6 +37,7 @@
   "scripts": {
     "eslint": "eslint --report-unused-disable-directives .eslintrc.js *.js",
     "demo": "LOG_LEVEL=trace node demo.js | bunyan",
+    "start": "npm run demo",
     "test": "LOG_LEVEL=fatal nyc mocha tests.js"
   }
 }
