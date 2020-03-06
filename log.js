@@ -1,9 +1,19 @@
 /* eslint-env node */
+const _ = require('lodash')
+
 const defaults = require('./defaults.js')
 
-const getLogger = (...args) => {
-	const log = defaults.targetLogger(null, null, Object.assign({}, ...args))
-	return Object.assign(log, { getLogger, log: (...args) => log.info(...args) })
-}
+const getParentLogger = _.once(() => defaults.targetLogger(null, null, null))
 
-module.exports = getLogger()
+const getChildLogger = _.memoize((component = 'demo') => {
+	const parentLogger = getParentLogger()
+	const childLogger = parentLogger.child({
+		component,
+	})
+	return Object.assign(childLogger, {
+		getLogger: getChildLogger,
+		log: childLogger.info,
+	})
+})
+
+module.exports = getChildLogger()
