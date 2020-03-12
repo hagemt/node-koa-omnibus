@@ -6,7 +6,7 @@
   "license": "MIT",
   "main": "index.js",
   "dependencies": {
-    "@hapi/boom": "9.0.0",
+    "@hapi/boom": "9.1.0",
     "bunyan": "1.8.12",
     "debug": "4.1.1",
     "koa": "2.11.0",
