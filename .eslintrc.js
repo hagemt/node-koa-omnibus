@@ -3,29 +3,30 @@ module.exports = {
 
 	env: {
 		es6: true,
+		mocha: true,
+    node: true,
 	},
 
 	extends: [
 		'eslint:recommended',
 		'plugin:import/recommended',
-		'plugin:mocha/recommended',
+		//'plugin:mocha/recommended',
+		'plugin:node/recommended',
+		//'plugin:prettier/recommended',
+		//'prettier',
 	],
 
 	parserOptions: {
 		ecmaVersion: 2017,
 	},
 
-	plugins: [
-		'mocha',
-		'import',
-	],
+	plugins: ['mocha', 'import', 'node', 'prettier'],
+
+  root: true,
 
 	rules: {
 		'import/unambiguous': ['off'],
-		'indent': ['error', 'tab'],
-		'linebreak-style': ['error', 'unix'],
-		'quotes': ['error', 'single'],
-		'semi': ['error', 'never'],
+		'sort-keys': ['warn'],
 	},
 
 }

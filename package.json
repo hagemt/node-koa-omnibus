@@ -1,42 +1,72 @@
 {
   "name": "koa-omnibus",
-  "version": "0.9.5",
+  "version": "1.0.0-rc",
   "description": "Base middleware for `koa` servers.",
   "author": "Tor E Hagemann <tor.hagemann@gmail.com>",
   "license": "MIT",
   "main": "index.js",
   "dependencies": {
-    "@hapi/boom": "9.0.0",
-    "bunyan": "1.8.12",
+    "@hapi/boom": "9.1.0",
     "debug": "4.1.1",
-    "koa": "2.11.0",
-    "lodash": "4.17.15",
-    "lru-cache": "5.1.1",
-    "uuid": "7.0.2"
+    "koa": "2.13.0",
+    "koa-pino-logger": "3.0.0",
+    "koa-router": "9.1.0",
+    "lodash": "4.17.19",
+    "lru-cache": "6.0.0",
+    "pino": "6.4.1",
+    "pino-caller": "3.0.2",
+    "pino-debug": "1.3.0",
+    "pino-pretty": "4.1.0",
+    "uuid": "8.2.0"
   },
   "devDependencies": {
-    "eslint": "5.6.0",
-    "eslint-plugin-import": "2.14.0",
-    "eslint-plugin-mocha": "5.2.0",
-    "mocha": "7.1.0",
-    "nyc": "15.0.0",
-    "supertest": "4.0.2"
+    "eslint": "7.5.0",
+    "eslint-config-prettier": "6.11.0",
+    "eslint-plugin-import": "2.22.0",
+    "eslint-plugin-mocha": "7.0.1",
+    "eslint-plugin-node": "11.1.0",
+    "eslint-plugin-prettier": "3.1.4",
+    "mocha": "8.0.1",
+    "nyc": "15.1.0",
+    "prettier": "2.0.5",
+    "supertest": "next"
   },
-  "peerDependencies": {
-    "koa": "^2"
+  "engines": {
+    "node": ">=8"
   },
+  "eslintIgnore": [
+    "!.eslintrc.js"
+  ],
   "keywords": [
     "koa",
     "omnibus",
     "middleware"
   ],
+  "peerDependencies": {
+    "koa": "^2"
+  },
+  "prettier": {
+    "endOfLine": "lf",
+    "printWidth": 128,
+    "quoteProps": "consistent",
+    "singleQuote": true,
+    "semi": false,
+    "trailingComma": "all",
+    "useTabs": true
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/hagemt/node-koa-omnibus.git"
   },
   "scripts": {
-    "eslint": "eslint --report-unused-disable-directives .eslintrc.js *.js",
-    "demo": "LOG_LEVEL=trace node demo.js | bunyan",
+    "bump": "npm run sane -- $(npm outdated --parseable | cut -d: -f4)",
+    "cleanup": "npm run sane && npm run prune && npm run bump && npm run prune",
+    "demo": "LOG_LEVEL=trace node demo | pino-pretty",
+    "demo:routers": "LOG_LEVEL=trace node demo/routers.js | pino-pretty",
+    "eslint": "eslint --report-unused-disable-directives .eslintrc.js **/*.js",
+    "eslint:fix": "npm run eslint -- --fix",
+    "prune": "npm prune --no-audit --no-fund --quiet",
+    "sane": "npm install --no-audit --no-fund --quiet",
     "start": "npm run demo",
     "test": "LOG_LEVEL=fatal nyc mocha tests.js"
   }
