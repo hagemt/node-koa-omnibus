@@ -1,9 +1,8 @@
-/* eslint-env node */
 const Boom = require('@hapi/boom')
-const Bunyan = require('bunyan')
 const LRU = require('lru-cache')
 const UUID = require('uuid')
 const _ = require('lodash')
+const pino = require('pino')
 
 const debug = require('debug')('koa-omnibus')
 
@@ -60,14 +59,17 @@ const timeBoundedAsyncFunction = (ms, fn) => new Promise((fulfill, reject) => {
 		})
 })
 
-const getLogger = _.once(() => {
-	/* istanbul ignore next */
-	return Bunyan.createLogger({
+/* istanbul ignore next */
+const pinoLogger = _.once(() => {
+	const logger = pino({
 		level: process.env.LOG_LEVEL || 'debug',
 		name: process.env.LOG_NAME || 'omnibus',
-		serializers: Bunyan.stdSerializers, // Object
-		src: process.env.NODE_ENV === 'development',
+		serializers: pino.stdSerializers, // Object
 	})
+	if (process.env.NODE_ENV === 'development') {
+		return require('pino-caller')(logger)
+	}
+	return logger
 })
 
 const createBoom = (context, error) => {
@@ -114,16 +116,16 @@ const namespacedObject = (context, namespace, ...args) => {
 
 const defaults = {
 	headers: Object.freeze({ timing: 'X-Response-Time', tracking: 'X-Request-ID' }),
+	limitRate: ({ limits, namespace }) => rateLimitByIP(Object.assign({ namespace }, limits)),
+	limitTime: ({ limits }) => (context, next) => timeBoundedAsyncFunction(limits.next, next),
 	limits: Object.freeze({ age: 60000, max: 1000 * 1000, next: 60000, rpm: 1000 }),
 	namespace: 'omnibus', // if set to false-y value, will write directly to context.state
-	limitRate: ({ namespace, limits }) => rateLimitByIP(Object.assign({ namespace }, limits)),
-	limitTime: ({ limits }) => (context, next) => timeBoundedAsyncFunction(limits.next, next),
 	redactedError: ({ namespace }, context) => renderBoom(context, namespace), // wraps 500s, etc.
 	redactedRequest: (options, context) => _.omit(context.request, ['header']), // no Authorization
 	redactedResponse: (options, context) => _.omit(context.response, ['header']), // no Set-Cookie
 	targetError: (options, context, error) => createBoom(context, error), // [namespace].error Object
-	targetHeaders: (options, context, string) => trackingObject(context, string), // tracking headers
-	targetLogger: (options, context, object) => getLogger().child(object), // log w/ tracking headers
+	targetHeaders: (options, context, string) => trackingObject(context, string), // response headers
+	targetLogger: (options, context, object) => pinoLogger().child(object || {}), // log w/ tracking
 	targetObject: ({ namespace }, context, source) => namespacedObject(context, namespace, source),
 }
 

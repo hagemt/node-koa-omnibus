@@ -1,9 +1,8 @@
-/* eslint-env mocha, node */
 const assert = require('assert')
 const HTTP = require('http')
 
 const Boom = require('@hapi/boom')
-const supertest = require('supertest')
+const supertest = require('supertest') // eslint-disable-line node/no-unpublished-require
 
 const omnibus = require('.')
 
@@ -24,8 +23,11 @@ describe('omnibus', () => {
 			test.server = HTTP.createServer(application.callback())
 		})
 
-		it('works', () => {
+		it('exists', () => {
 			assert(typeof omnibus === 'function', 'omnibus is not a Function')
+		})
+
+		it('works', () => {
 			return supertest(test.server)
 				.get('/')
 				.expect('x-request-id', validRequestUUID)
