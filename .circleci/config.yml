@@ -5,19 +5,25 @@ jobs:
   build-and-test:
     environment:
       CC_TEST_REPORTER_ID: eec56ecadc56c4fe49a7d98b3a7102f619c2d8cc80c319101b24b66ab69030b2
+      COVERAGE_FILE: coverage/lcov.info
     executor:
       name: node/default
     steps:
       - checkout
       - run:
-          name: Setup Code Climate test-reporter
+          name: Code Climate Setup
           command: |
             curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
             chmod +x ./cc-test-reporter
       - node/with-cache:
           steps:
             - run: npm install
-            - run: npm test
+      - run:
+          name: Code Climate Coverage
+          command: |
+            ./cc-test-reporter before-build
+            npm test
+            ./cc-test-reporter after-build --coverage-input-type lcov --exit-code $?
 workflows:
     build-and-test:
       jobs:
