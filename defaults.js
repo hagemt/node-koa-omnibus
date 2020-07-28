@@ -9,7 +9,7 @@ const debug = require('debug')('koa-omnibus')
 const rateLimitByIP = ({ age, max, namespace, rpm }) => {
 	const cache = new LRU({ max, maxAge: age })
 	const touch = ({ ip: key }) => {
-		debug('tracking bucket: %s', key)
+		debug('tracing bucket: %s', key)
 		if (!cache.has(key)) {
 			const reset = Date.now() + age
 			cache.set(key, { count: 0, reset })
@@ -18,15 +18,15 @@ const rateLimitByIP = ({ age, max, namespace, rpm }) => {
 		value.count += 1
 		return value
 	}
-	const trackingHeaders = (context, headers) => {
+	const tracingHeaders = (context, headers) => {
 		const target = _.get(context, namespace, {})
-		const tracking = _.get(target, 'tracking', {})
-		return Object.assign(tracking, headers)
+		const tracing = _.get(target, 'tracing', {})
+		return Object.assign(tracing, headers)
 	}
-	const middleware = async function throw429 (context) {
+	const middleware = async function throw429(context) {
 		const { count, reset } = touch(context)
 		const remaining = Math.max(0, rpm - count)
-		const headers = trackingHeaders(context, {
+		const headers = tracingHeaders(context, {
 			'X-RateLimit-Limit': `${rpm} request(s) per minute`,
 			'X-RateLimit-Remaining': `${remaining} request(s)`,
 			'X-RateLimit-Reset': new Date(reset).toISOString(),
@@ -40,24 +40,25 @@ const rateLimitByIP = ({ age, max, namespace, rpm }) => {
 	return Object.assign(middleware, { cache, touch })
 }
 
-const timeBoundedAsyncFunction = (ms, fn) => new Promise((fulfill, reject) => {
-	// conforms to https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/408:
-	const message = `Exceeded time limit [${ms} millisecond(s)]` // see renderBoom
-	const error = Boom.clientTimeout(message, { headers: { Connection: 'close' } })
-	debug('timeout set: %dms', ms) // do this after?
-	const timeout = setTimeout(reject, ms, error)
-	fn()
-		.then((result) => {
-			debug('timeout end: %dms', ms)
-			clearTimeout(timeout)
-			fulfill(result)
-		})
-		.catch((reason) => {
-			debug('timeout hit: %dms', ms)
-			clearTimeout(timeout)
-			reject(reason)
-		})
-})
+const timeBoundedAsyncFunction = (ms, fn) =>
+	new Promise((fulfill, reject) => {
+		// conforms to https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/408:
+		const message = `Exceeded time limit [${ms} millisecond(s)]` // see renderBoom
+		const error = Boom.clientTimeout(message, { headers: { Connection: 'close' } })
+		debug('timeout set: %dms', ms) // do this after?
+		const timeout = setTimeout(reject, ms, error)
+		fn()
+			.then((result) => {
+				debug('timeout end: %dms', ms)
+				clearTimeout(timeout)
+				fulfill(result)
+			})
+			.catch((reason) => {
+				debug('timeout hit: %dms', ms)
+				clearTimeout(timeout)
+				reject(reason)
+			})
+	})
 
 /* istanbul ignore next */
 const pinoLogger = _.once(() => {
@@ -75,7 +76,7 @@ const pinoLogger = _.once(() => {
 const createBoom = (context, error) => {
 	if (error) return Boom.boomify(error, { context })
 	return new Boom.Boom(`${context.method} ${context.url}`, {
-		statusCode: context.status,
+		statusCode: context.status || 404,
 	})
 }
 
@@ -98,13 +99,13 @@ const renderBoom = (context, namespace) => {
 		const summary = output.payload.error
 		debug('rendered Boom: %s', summary)
 	}
-	setHeaders(object, 'tracking')
+	setHeaders(object, 'tracing')
 	return error
 }
 
-const trackingObject = (context, key) => {
+const tracingObject = (context, key) => {
 	const value = context.get(key) || UUID.v1()
-	debug('tracking header: %s=%s', key, value)
+	debug('tracing header: %s=%s', key, value)
 	return { [key]: value } // more added later
 }
 
@@ -115,7 +116,7 @@ const namespacedObject = (context, namespace, ...args) => {
 }
 
 const defaults = {
-	headers: Object.freeze({ timing: 'X-Response-Time', tracking: 'X-Request-ID' }),
+	headers: Object.freeze({ timing: 'X-Response-Time', tracing: 'X-Request-ID' }),
 	limitRate: ({ limits, namespace }) => rateLimitByIP(Object.assign({ namespace }, limits)),
 	limitTime: ({ limits }) => (context, next) => timeBoundedAsyncFunction(limits.next, next),
 	limits: Object.freeze({ age: 60000, max: 1000 * 1000, next: 60000, rpm: 1000 }),
@@ -123,10 +124,10 @@ const defaults = {
 	redactedError: ({ namespace }, context) => renderBoom(context, namespace), // wraps 500s, etc.
 	redactedRequest: (options, context) => _.omit(context.request, ['header']), // no Authorization
 	redactedResponse: (options, context) => _.omit(context.response, ['header']), // no Set-Cookie
-	targetError: (options, context, error) => createBoom(context, error), // [namespace].error Object
-	targetHeaders: (options, context, string) => trackingObject(context, string), // response headers
-	targetLogger: (options, context, object) => pinoLogger().child(object || {}), // log w/ tracking
+	targetError: (options, context, error) => createBoom(context, error), // target: [namespace].error
+	targetLogger: (options, context, bindings = {}) => pinoLogger().child(bindings), // [namespace].log
 	targetObject: ({ namespace }, context, source) => namespacedObject(context, namespace, source),
+	targetTracer: (options, context, key) => tracingObject(context, key), // [namespace].tracing
 }
 
 module.exports = defaults

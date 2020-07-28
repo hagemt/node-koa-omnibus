@@ -9,18 +9,18 @@ const createOptions = (...args) => {
 	const options = Object.assign({}, defaults, ...args) // < however, this works fine
 	options.headers = Object.freeze(Object.assign({}, defaults.headers, options.headers))
 	options.limits = Object.freeze(Object.assign({}, defaults.limits, options.limits))
-	options.namespace = options.namespace || 'state' // not default namespace
+	options.namespace = options.namespace || 'state' // whenever namespace is false-y
 	return Object.freeze(options) // XXX: should Options be a class?
 }
 
 const createMiddleware = (options) => {
-	const { tracking, timing } = options.headers
+	const { timing, tracing } = options.headers
 	const limitRate = options.limitRate(options)
 	const limitTime = options.limitTime(options)
-	return async function omnibus (context, next) {
-		const headers = options.targetHeaders(options, context, tracking) // Object
-		const log = options.targetLogger(options, context, { tracking: headers })
-		const source = { log, timing: {}, tracking: headers } // wrapped into:
+	return async function omnibus(context, next) {
+		const tracer = options.targetTracer(options, context, tracing)
+		const log = options.targetLogger(options, context, { tracing: tracer })
+		const source = { log, timing: {}, tracing: tracer } // wrapped into:
 		const target = options.targetObject(options, context, source)
 		const start = (target.timing.start = process.hrtime())
 		try {
@@ -32,12 +32,14 @@ const createMiddleware = (options) => {
 		} finally {
 			const [s, ns] = process.hrtime(start)
 			const ms = Number(s * 1e3 + ns / 1e6).toFixed(6)
-			headers[timing] = `${ms} millisecond(s)` // put in tracking?
+			tracer[timing] = `${ms} millisecond(s)` // header
+
 			const err = options.redactedError(options, context)
 			const req = options.redactedRequest(options, context)
 			const res = options.redactedResponse(options, context)
-			if (!err) log.trace({ req, res }, 'request') // softer
-			else log.debug({ err, req, res }, 'request') // louder
+
+			if (!err) log.trace({ req, res }, 'request')
+			else log.debug({ err, req, res }, 'request')
 		}
 	}
 }
@@ -48,9 +50,9 @@ const omnibus = (...args) => {
 	return createMiddleware(options)
 }
 
-const createApplication = (options) => {
+const createApplication = (options = createOptions()) => {
 	let application = new Application()
-	for (const key in ['before', 'hooks']) {
+	for (const key of ['before', 'hooks']) {
 		const all = Array.isArray(options[key]) ? options[key] : []
 		for (const one of all) {
 			switch (key) {
@@ -63,7 +65,7 @@ const createApplication = (options) => {
 		}
 	}
 	application.use(omnibus(options))
-	for (const key in ['after', 'routers']) {
+	for (const key of ['after', 'routers']) {
 		const all = Array.isArray(options[key]) ? options[key] : []
 		for (const one of all) {
 			switch (key) {
