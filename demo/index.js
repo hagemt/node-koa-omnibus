@@ -16,8 +16,8 @@ if (!module.parent) {
 	})
 
 	const log = logging.getLogger('demo')
-	app.use(async function throw500 () {
-		throw new Error('message') // stack not exposed in response
+	app.use(async () => {
+		throw new Error('message') // throws 500 (stack not exposed in response)
 	})
 
 	app.listen(port, hostname, () => {

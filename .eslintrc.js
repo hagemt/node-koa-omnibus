@@ -1,19 +1,18 @@
 /* eslint-env node */
 module.exports = {
-
 	env: {
 		es6: true,
 		mocha: true,
-    node: true,
+		node: true,
 	},
 
 	extends: [
 		'eslint:recommended',
 		'plugin:import/recommended',
-		//'plugin:mocha/recommended',
+		'plugin:mocha/recommended',
 		'plugin:node/recommended',
-		//'plugin:prettier/recommended',
-		//'prettier',
+		'plugin:prettier/recommended',
+		'prettier',
 	],
 
 	parserOptions: {
@@ -22,11 +21,10 @@ module.exports = {
 
 	plugins: ['mocha', 'import', 'node', 'prettier'],
 
-  root: true,
+	root: true,
 
 	rules: {
 		'import/unambiguous': ['off'],
 		'sort-keys': ['warn'],
 	},
-
 }
