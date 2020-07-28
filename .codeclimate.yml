@@ -1,0 +1,8 @@
+version: '2'
+plugins:
+  # does not seem to respect prettier config in package.json:
+  eslint:
+    enabled: false
+exclude_patterns:
+  - 'coverage/**'
+  - 'node_modules/**'
