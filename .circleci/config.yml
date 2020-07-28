@@ -1,0 +1,24 @@
+version: 2.1
+orbs:
+  node: circleci/node@1.1.6
+jobs:
+  build-and-test:
+    environment:
+      CC_TEST_REPORTER_ID: eec56ecadc56c4fe49a7d98b3a7102f619c2d8cc80c319101b24b66ab69030b2
+    executor:
+      name: node/default
+    steps:
+      - checkout
+      - run:
+          name: Setup Code Climate test-reporter
+          command: |
+            curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+            chmod +x ./cc-test-reporter
+      - node/with-cache:
+          steps:
+            - run: npm install
+            - run: npm test
+workflows:
+    build-and-test:
+      jobs:
+        - build-and-test
