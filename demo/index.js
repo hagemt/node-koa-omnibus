@@ -3,7 +3,6 @@ const URL = require('url')
 const logging = require('./log.js')
 const omnibus = require('..')
 
-/* istanbul ignore next */
 if (!module.parent) {
 	const hostname = process.env.BIND || 'localhost'
 	const port = process.env.PORT || 8080 // default

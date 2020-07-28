@@ -31,7 +31,7 @@ All dependencies are included only for defaults; you can override anything you w
 omnibus({
 
 	// simple constants: (all Numbers are in milliseconds)
-	headers: { timing:String, tracking:String }, // defaults: 'X-Response-Time' and 'X-Request-ID'
+	headers: { timing:String, tracing:String }, // defaults: 'X-Response-Time' and 'X-Request-ID'
 	limits: Object { age:Number, max:Number, next:Number, rpm:Number }, // 60000/1000000/60000/1000
 	namespace: String, // default: 'omnibus' (if set false-y, context.state decorated directly)
 
@@ -46,7 +46,7 @@ omnibus({
 
 	// object factories (ternary):
 	targetError: (options, context, error) => error, // not redacted (default: Boom)
-	targetHeaders: (options, context, string) => Object { [string]: "$(uuidgen -t)" },
+	targetTracer: (options, context, string) => Object { [string]: "$(uuidgen -t)" },
 	targetLogger: (options, context, object) => log, // will include tracking headers
 	targetObject: (options, context, object) => object, // context[namespace || 'state']
 

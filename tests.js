@@ -96,15 +96,20 @@ describe('omnibus', function () {
 				}
 				return app
 			}
-			const throw404 = async ({ request, response }) => {
+			const throw404 = async ({ request, response, test: { log } }, next) => {
+				// FIXME: in v1, include something like this in omnibus middleware?
+				await next()
+				/* istanbul ignore else */
 				if (!response.body) {
-					const message = `${request.method} ${request.url}`
-					throw Boom.notFound(message)
+					throw Boom.notFound(`${request.method} ${request.url}`)
+				} else {
+					log.fatal('actual: JSON in HTTP response (expected: 404 Not Found)')
 				}
 			}
 			const app = omnibus.createApplication({
 				after: [throw404],
 				hooks: [hookUsed],
+				namespace: 'test',
 			})
 			const body = Boom.notFound('GET /').output.payload
 			return harness(app).get('/').expect(404, body)
