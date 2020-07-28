@@ -37,6 +37,7 @@
     "node": ">=8"
   },
   "eslintIgnore": [
+    "coverage/*.js",
     "!.eslintrc.js"
   ],
   "keywords": [
@@ -64,7 +65,7 @@
     "bump": "npm run sane -- $(npm outdated --parseable | cut -d: -f4)",
     "cleanup": "npm run sane && npm run prune && npm run bump",
     "precoverage": "nyc -- npm run mocha",
-    "coverage": "nyc report -r html",
+    "coverage": "nyc report -r html && nyc report -r lcov",
     "postcoverage": "nyc check-coverage",
     "demo": "cross-env LOG_LEVEL=trace node demo | pino-pretty",
     "demo:routers": "node demo/routers.js | pino-pretty",
