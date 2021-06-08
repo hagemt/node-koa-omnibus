@@ -1,6 +1,6 @@
 {
   "name": "koa-omnibus",
-  "version": "1.0.0-rc2",
+  "version": "1.0.0-rc3",
   "description": "Base middleware for `koa` servers.",
   "author": "Tor E Hagemann <tor.hagemann@gmail.com>",
   "license": "MIT",
